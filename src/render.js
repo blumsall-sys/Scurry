@@ -24,7 +24,7 @@ export function paint(g){renderGame=g;const c=g.ui.canvas.getContext('2d',{alpha
  if(g.sense>0){const tick=Math.floor(g.anim*8)%3;for(const o of world[g.map]?.objects||[]){if(['stone','metal','herb','clod','pipe'].includes(o.type)&&!collected(g.s,g.map,o)&&Math.hypot(o.x+.5-g.p.x,o.y+.5-g.p.y)<7){const x=(o.x+.5)*16-cameraX,y=(o.y+.5)*16-cameraY;ring(c,x-9-tick,y-17-tick,18+tick*2,18+tick*2,'#e9d977');}}}
  for(const p of g.particles){c.globalAlpha=Math.max(0,Math.min(1,p.life));c.fillStyle=p.color;c.font='bold 9px monospace';c.textAlign='center';c.fillText(p.text,p.x*16-cameraX,p.y*16-cameraY-20-(1-p.life)*18);c.globalAlpha=1;}
  if(g.buildMode){const [x,y]=g.mouseTile||[Math.floor(g.p.x),Math.floor(g.p.y)],build={fence:[1,1],drain:[1,1],burrow:[3,3],stall:[3,2]}[g.buildMode]||[1,1];const bx=x*16-cameraX,by=y*16-cameraY;c.globalAlpha=.55;px(c,bx,by,16*build[0],16*build[1],'#f1d78b');c.globalAlpha=1;ring(c,bx,by,16*build[0],16*build[1],'#f9f3c4');}
- drawWeather(g);
+ if(!['home','shop','bakery','hall','clinic','repair','watch'].includes(g.map))drawWeather(g);
  drawMinimap(g,c);drawMapName(g,c);
 }
 function drawTile(x,y,t,sx,sy){const c=ctx,k=seed(x,y),v=(n)=>Math.floor(k*n);let base='#70965d';if(renderGame.season==='autumn')base='#a2a06a';if(renderGame.season==='winter')base='#a7b4a5';if(renderGame.season==='summer')base='#669355';

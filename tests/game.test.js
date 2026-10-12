@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Game} from '../src/game.js';
 import {MAPS,INTERIORS,PORTALS,NPCS,HOMES,newState,seasonForDay,BUILDINGS,CROPS} from '../src/data.js';
 import {blocked,mapTile,validBuild,world} from '../src/world.js';
-class FakeUI{constructor(){this.messages=[];}refresh(){}refreshFast(){}save(){}close(){}toast(t){this.messages.push(t);}bulletin(){}dialogue(){}pumpChoice(){}build(){}shipping(){}shop(){}town(){}}
+class FakeUI{constructor(){this.messages=[];this.action=null;}refresh(){}refreshFast(){}save(){}close(){}toast(t){this.messages.push(t);}bulletin(){}dialogue(){}pumpChoice(){}build(){}shipping(){}shop(){}town(){}sleepMenu(){this.action='sleepMenu';}inventory(){this.action='inventory';}}
 function make(map='farm'){const ui=new FakeUI();const game=new Game(ui);game.start();game.enter(map,map==='town'?47.5:20.5,map==='town'?48.5:18.5,true);return game;}
 
 test('starter world regions and doors share explicit grounded map coordinates',()=>{const g=make();assert.equal(Object.keys(MAPS).length,11);for(const h of HOMES){assert.ok(h.x>=1&&h.y>=1);assert.ok(h.x+h.w<MAPS[h.map].w);assert.ok(h.y+h.h<MAPS[h.map].h);if(h.to)assert.ok(INTERIORS.includes(h.to));}for(const [from,ps] of Object.entries(PORTALS)){for(const p of ps){assert.ok(MAPS[p.to]);assert.ok(p.x<MAPS[from].w&&p.y<MAPS[from].h);}}assert.equal(g.map,'farm');});
@@ -25,3 +25,61 @@ test('caravan decisions affect cargo, treasury, and quest, no resource duplicati
 test('season rotation and save/load JSON preserve full state',()=>{assert.equal(seasonForDay(1),'spring');assert.equal(seasonForDay(15),'summer');assert.equal(seasonForDay(29),'autumn');assert.equal(seasonForDay(43),'winter');assert.equal(seasonForDay(57),'spring');const g=make();g.till(16,18);g.plant(16,18);const str=JSON.stringify(g.s);const h=make();h.start(JSON.parse(str));assert.deepEqual(h.s.crops,g.s.crops);assert.deepEqual(h.s.town,g.s.town);});
 
 test('interiors and farm garden have safe walkable tiles',()=>{const g=make();assert.equal(blocked('home',8.5,9.5,g.s),false);assert.equal(blocked('farm',20.5,19.5,g.s),false);assert.equal(validBuild(g.s,'fence','farm',19,20),null);});
+
+// Regression tests added after v0.9.1 shipped with a missing INTERIORS import.
+test('pressing E by interior EXIT exits home and correctly places Nim outside',()=>{
+ const ui=new FakeUI(), g=new Game(ui);g.start();
+ assert.equal(g.map,'home');
+ assert.doesNotThrow(()=>g.interact());
+ assert.equal(g.map,'farm');
+ const home=HOMES.find(h=>h.to==='home');
+ assert.equal(g.p.x,home.x+Math.floor(home.w/2)+.5);
+ assert.ok(g.p.y>=home.y+home.h+1);
+ assert.equal(blocked(g.map,g.p.x,g.p.y,g.s),false);
+});
+test('all seven interior exits share valid, unblocked exterior doorsteps',()=>{
+ const ui=new FakeUI(),g=new Game(ui);g.start();
+ for(const id of INTERIORS){
+  g.enter(id,8.5,8.9);
+  assert.doesNotThrow(()=>g.interact(),`${id}: E should never throw`);
+  const house=HOMES.find(h=>h.to===id);
+  assert.equal(g.map,house.map,`${id}: wrong parent map`);
+  assert.ok(!blocked(g.map,g.p.x,g.p.y,g.s),`${id}: exit spawn blocked`);
+  assert.ok(Math.hypot(g.p.x-(house.x+Math.floor(house.w/2)+.5),g.p.y-(house.y+house.h+.5))<1.8);
+  assert.doesNotThrow(()=>g.interact(),`${id}: should be able to re-enter through same doorway`);
+  assert.equal(g.map,id,`${id}: re-entry did not work`);
+ }
+});
+test('bed opens rest interaction with E and with clicking the drawn mattress',()=>{
+ const ui=new FakeUI(),g=new Game(ui);g.start();
+ g.p.x=5.4;g.p.y=5.5;g.interact();assert.equal(ui.action,'sleepMenu');
+ ui.action=null;
+ assert.equal(g.clickHotspot(4.2,3.1),true);
+ assert.equal(ui.action,'sleepMenu');
+ ui.action=null;
+ g.p.x=8.5;g.p.y=8.5;
+ assert.equal(g.clickHotspot(4.5,3.5),true);
+ assert.equal(ui.action,null,'must not teleport to a distant bed');
+ assert.ok(ui.messages.some(t=>t.includes('Walk closer to the bed')));
+});
+test('doorway tiles permit walk-out and auto transition, but surrounding walls stay solid',()=>{
+ const ui=new FakeUI(),g=new Game(ui);g.start();
+ assert.equal(mapTile('home',8,11,g.s),'floor');
+ assert.equal(mapTile('home',7,11,g.s),'wall');
+ assert.equal(mapTile('home',9,11,g.s),'wall');
+ g.p.x=8.5;g.p.y=10.6;g.setKey('s',true);g.update(.05);g.setKey('s',false);
+ assert.equal(g.map,'farm','walking south over the drawn threshold should exit');
+});
+test('mouse clicking an interior exit or outside door triggers only when close enough',()=>{
+ const g=new Game(new FakeUI());g.start();
+ assert.equal(g.clickHotspot(8.5,10.9),true);
+ assert.equal(g.map,'farm');
+ assert.equal(g.clickHotspot(10.5,12.0),true);
+ assert.equal(g.map,'home');
+});
+test('bed sleep advances a single day and original state survives the transition',()=>{
+ const ui=new FakeUI(),g=new Game(ui);g.start();g.s.day=2;g.p.shells=61;
+ g.p.x=5.5;g.p.y=5.5;g.interact();assert.equal(ui.action,'sleepMenu');
+ g.advanceDay(true);assert.equal(g.s.day,3);assert.equal(g.p.shells,61);
+ assert.equal(g.map,'home');
+});

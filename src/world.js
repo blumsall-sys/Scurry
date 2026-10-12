@@ -4,7 +4,7 @@ export function initializeWorld(){for(const [id,m] of Object.entries(MAPS))world
 const noise=(x,y)=>seededHash(x,y,1941);
 export function mapTile(id,x,y,s){
  if(!MAPS[id]||x<0||y<0||x>=MAPS[id].w||y>=MAPS[id].h)return 'wall';
- if(INTERIORS.includes(id))return (x===0||y===0||x===16||y===11)?'wall':'floor';
+ if(INTERIORS.includes(id))return (y===11&&x===8)?'floor':(x===0||y===0||x===16||y===11)?'wall':'floor';
  if(s.dug?.[`${id}:${x},${y}`])return 'tunnelFloor';
  if(id==='tunnel'){
   if(x<2||y<2||x>61||y>45)return 'rock';

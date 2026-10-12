@@ -1,4 +1,4 @@
-import {CROPS,SEASONS,MAPS,NPCS,HOMES,BUILDINGS,RECIPES,FACTIONS,QUESTS,PORTALS,ITEM_NAMES,newState,seasonForDay,seasonDay,clamp,seededHash} from './data.js';
+import {CROPS,SEASONS,MAPS,INTERIORS,NPCS,HOMES,BUILDINGS,RECIPES,FACTIONS,QUESTS,PORTALS,ITEM_NAMES,newState,seasonForDay,seasonDay,clamp,seededHash} from './data.js';
 import {world,initializeWorld,mapTile,blocked,canMove,objectAt,doorwayNear,portalNear,validBuild,inFarmPlot,collected} from './world.js';
 const distance=(x,y,a,b)=>Math.hypot(x-a,y-b), money=n=>`${Math.floor(n)} shells`;
 export class Game {
@@ -26,6 +26,8 @@ export class Game {
  target(){const [dx,dy]=this.direction();return [Math.floor(this.p.x+dx*.85),Math.floor(this.p.y+dy*.85)];}
  update(dt){if(this.paused)return;dt=Math.min(dt,.05);this.anim+=dt;this.hurtCd=Math.max(0,this.hurtCd-dt);this.attacking=Math.max(0,this.attacking-dt);this.dash=Math.max(0,this.dash-dt);this.dashCd=Math.max(0,this.dashCd-dt);this.sense=Math.max(0,this.sense-dt);
  let dx=0,dy=0;const k=this.keys;if(k.has('w')||k.has('arrowup'))dy--;if(k.has('s')||k.has('arrowdown'))dy++;if(k.has('a')||k.has('arrowleft'))dx--;if(k.has('d')||k.has('arrowright'))dx++;if(dx||dy){const d=Math.hypot(dx,dy);dx/=d;dy/=d;if(Math.abs(dx)>Math.abs(dy))this.p.face=dx>0?'right':'left';else this.p.face=dy>0?'down':'up';let speed=this.dash>0?13:(k.has('shift')&&this.p.stamina>1?5.0:3.1);if(k.has('shift')&&this.dash<=0){this.p.stamina=Math.max(0,this.p.stamina-dt*6);}const nx=this.p.x+dx*speed*dt,ny=this.p.y+dy*speed*dt;if(canMove(this.map,nx,this.p.y,this.s))this.p.x=nx;if(canMove(this.map,this.p.x,ny,this.s))this.p.y=ny;}
+ // Walking across the visible interior threshold also exits. Keep E as the accessible alternative.
+ if(INTERIORS.includes(this.map)&&this.p.y>=10.65&&Math.abs(this.p.x-8.5)<.48){this.exitInterior();return;}
  this.p.stamina=clamp(this.p.stamina+dt*(this.p.fullness<15?1:3.4));this.p.fullness=clamp(this.p.fullness-dt*.021);this.s.minute+=dt*(1440/(60*(this.s.settings.dayLength||12)));if(this.s.minute>=1440)this.advanceDay(false);
  for(const e of this.enemies){if(e.dead)continue;e.cool=Math.max(0,e.cool-dt);e.stun=Math.max(0,e.stun-dt);e.warn=Math.max(0,e.warn-dt);const dist=distance(e.x,e.y,this.p.x,this.p.y);if(e.stun>0)continue;if(e.warn>0){if(e.warn<.04&&e.cool<=0){e.cool=1.5;if(dist<(e.type==='scout'?1.85:1.1))this.takeDamage(e.type==='grub'?5:e.type==='beetle'?9:8);this.particles.push({x:e.x,y:e.y,text:'!',life:.5,color:'#f6d18a'});}continue;}
  if(dist<6&&dist>0.75){const sp=e.type==='beetle'?1.15:1.25;const vx=(this.p.x-e.x)/dist,vy=(this.p.y-e.y)/dist;const nx=e.x+vx*sp*dt,ny=e.y+vy*sp*dt;if(canMove(this.map,nx,e.y,this.s,.22))e.x=nx;if(canMove(this.map,e.x,ny,this.s,.22))e.y=ny;e.dirX=vx;e.dirY=vy;}else if(dist>8&&distance(e.x,e.y,e.homeX,e.homeY)>1){const vx=e.homeX-e.x,vy=e.homeY-e.y,d=Math.hypot(vx,vy)||1;if(canMove(this.map,e.x+vx/d*.65*dt,e.y+vy/d*.65*dt,this.s)) {e.x+=vx/d*.65*dt;e.y+=vy/d*.65*dt;}}
@@ -52,18 +54,76 @@ export class Game {
  plant(x,y){if(this.map!=='farm'||!inFarmPlot(x,y))return this.toast('Plant on your garden plots at the farm.');const key=`${x},${y}`,crop=this.p.crop,c=CROPS[crop],plot=this.s.crops[key];if(!plot?.tilled)return this.toast('Till this soil first with the hoe (2).');if(plot.crop)return this.toast('This plot is already planted.');if(!(this.p.seeds[crop]>0))return this.toast(`No ${c.name} seeds. Buy some at Rook’s store.`);if(!c.seasons.includes(this.season)&&!(crop==='mushroom'&&this.map==='tunnel'))return this.toast(`${c.name} needs ${c.seasons.join(' or ')}.`);this.p.seeds[crop]--;this.s.crops[key]={...plot,crop,days:0,watered:this.s.weather==='rain',fertilized:false};this.p.stamina=clamp(this.p.stamina-3);this.sound(430,.08);this.gainSkill('farming',3);this.toast(`${c.name} planted! Water with key 4.`);}
  water(x,y){const p=this.s.crops[`${x},${y}`];if(!p?.crop)return this.toast('Point toward a planted crop to water it.');p.watered=true;this.p.stamina=clamp(this.p.stamina-2);this.sound(680,.09,'sine');this.toast('Freshly watered!');}
  harvest(x,y){const key=`${x},${y}`,p=this.s.crops[key];if(!p?.crop)return;const c=CROPS[p.crop];if(p.days<c.days)return this.toast(`${c.name}: ${p.days}/${c.days} growing days.`);const bonus=(p.fertilized?1:0)+(this.p.skills.farming>=3?1:0);this.grant({[p.crop]:1+bonus});this.gainSkill('farming',6);this.sound(710,.13);this.toast(`Harvested ${1+bonus} ${c.name}!`);if(c.regrow){p.days=c.days-c.regrow;p.watered=false;p.fertilized=false;}else this.s.crops[key]={tilled:true};this.ui.refresh();}
+ // Exterior spawn is deliberately beyond the building footprint, matching its drawn door.
+ exitInterior(){
+  if(!INTERIORS.includes(this.map))return false;
+  const h=HOMES.find(h=>h.to===this.map);
+  if(!h){this.toast('The outside doorway could not be found.');return false;}
+  const x=h.x+Math.floor(h.w/2)+.5,y=h.y+h.h+1.6;
+  if(!canMove(h.map,x,y,this.s)){
+   this.toast('The outside doorstep is blocked. Clear the path before leaving.');return false;
+  }
+  this.enter(h.map,x,y);return true;
+ }
+ // Reusable keyboard and mouse doorway handler. Keeping it central avoids mismatched triggers.
+ enterExteriorDoor(h){
+  if(!h?.to)return false;
+  this.p.returnDoor=this.map;
+  this.enter(h.to,8.5,8.9);return true;
+ }
+ // Only clicking an actual nearby hotspot activates it, never arbitrary distant canvas clicks.
+ clickHotspot(x,y){
+  if(this.paused)return false;
+  const p=this.p;
+  if(INTERIORS.includes(this.map)){
+   if(this.map==='home'&&x>=2.8&&x<=7.1&&y>=2.4&&y<=5.5){
+    if(distance(p.x,p.y,5,4.5)<=3){this.ui.sleepMenu();}else this.toast('Walk closer to the bed before resting.');
+    return true;
+   }
+   if(x>=7.55&&x<=9.55&&y>=9.7&&y<=11.6){
+    if(distance(p.x,p.y,8.5,10.5)<=2.8)this.exitInterior();
+    else this.toast('Walk closer to the exit first.');
+    return true;
+   }
+  }else{
+   for(const h of HOMES){
+    if(h.map!==this.map||!h.to)continue;
+    const dx=h.x+Math.floor(h.w/2)+.5,dy=h.y+h.h;
+    if(Math.abs(x-dx)<=.8&&Math.abs(y-dy)<=1.1){
+     if(distance(p.x,p.y,dx,dy+.5)<2.8)this.enterExteriorDoor(h);
+     else this.toast('Walk up to the doorway first.');
+     return true;
+    }
+   }
+   for(const portal of PORTALS[this.map]||[]){
+    if(distance(x,y,portal.x+.5,portal.y+.5)<1.0){
+     if(distance(p.x,p.y,portal.x+.5,portal.y+.5)<2.8)this.enter(portal.to,portal.at[0]+.5,portal.at[1]+.5);
+     else this.toast('Walk closer to the travel sign first.');
+     return true;
+    }
+   }
+  }
+  return false;
+ }
  interact(){if(this.paused)return;const id=this.map,p=this.p;
- if(this.map==='farm'&&this.s.storyStage<=2&&this.s.clods>=3&&this.s.grubs>=2&&distance(p.x,p.y,22.5,15.5)<2.5)return this.ui.pumpChoice();
- if(INTERIORS.includes(id)&&distance(p.x,p.y,8.5,10)<2.6){const from=p.returnDoor||'farm';const h=HOMES.find(h=>h.to===id);if(h)return this.enter(h.map,h.x+Math.floor(h.w/2)+.5,h.y+h.h+1.6);}
- const door=doorwayNear(id,p.x,p.y);if(door){p.returnDoor=id;this.enter(door.h.to,8.5,9.1);return;}
- const portal=portalNear(id,p.x,p.y);if(portal){this.enter(portal.to,portal.at[0]+.5,portal.at[1]+.5);return;}
- if(id==='home'){if(distance(p.x,p.y,5.5,4.5)<2.3)return this.ui.sleepMenu();if(distance(p.x,p.y,11,4.5)<2.3)return this.ui.inventory();}
- if(id==='shop')return this.ui.shop('rook');if(id==='bakery')return this.ui.shop('tilly');if(id==='clinic')return this.ui.shop('lumi');if(id==='hall')return this.ui.town();if(id==='repair')return this.ui.craft();if(id==='watch')return this.ui.town();
- const npc=this.npcNear(2);if(npc)return this.ui.npc(npc);
- const o=objectAt(this.s,id,p.x,p.y,2);if(o){if(o.type==='pipe'&&this.s.grubs>=2&&!this.s.pumpChoice)return this.ui.pumpChoice();if(o.type==='shipping')return this.ui.shipping();if(o.type==='notice'||o.type==='mailbox')return this.ui.bulletin();if(o.type==='townProject'||o.type==='bridgeSite'||o.type==='watchSite')return this.ui.build();if(o.type==='travel'||o.type==='caravan')return this.ui.caravan();if(o.type==='crate')return this.ui.crimeChoice();if(o.type==='fountain'){p.stamina=clamp(p.stamina+12);this.toast('Cool water restores 12 stamina.');return;}if(['wood','stone','metal','herb'].includes(o.type))return this.gather(o);if(o.type==='farmSign')return this.ui.dialogue('Nim’s Garden','Start by clearing clods with the trowel (1), till with the hoe (2), plant seeds (3), and water (4). Crops grow at dawn, if watered.');if(o.type==='tunnelSign'||o.type==='forestSign')return this.ui.dialogue(o.type==='tunnelSign'?'Root Tunnels':'Bramblewood','Stay alert. Some earth is diggable; stone is not. Use F for Soil Sense, Q to swing, K to dash.');}
- const [x,y]=this.target();if(id==='farm'&&this.s.crops[`${x},${y}`]?.crop)return this.harvest(x,y);
- if(id==='farm'&&this.s.crops[`${Math.floor(p.x)},${Math.floor(p.y)}`]?.crop)return this.harvest(Math.floor(p.x),Math.floor(p.y));
- this.toast('Nothing to interact with nearby. Walk closer to a door, item or resident.');
+  if(id==='farm'&&this.s.storyStage<=2&&this.s.clods>=3&&this.s.grubs>=2&&distance(p.x,p.y,22.5,15.5)<2.5)return this.ui.pumpChoice();
+  // Recognize interior exit before other objects, with no missing-scope globals.
+  if(INTERIORS.includes(id)&&distance(p.x,p.y,8.5,10.5)<2.7){this.exitInterior();return;}
+  const door=doorwayNear(id,p.x,p.y);
+  if(door){this.enterExteriorDoor(door.h);return;}
+  const portal=portalNear(id,p.x,p.y);
+  if(portal){this.enter(portal.to,portal.at[0]+.5,portal.at[1]+.5);return;}
+  if(id==='home'){
+   if(distance(p.x,p.y,5,4.5)<2.9)return this.ui.sleepMenu();
+   if(distance(p.x,p.y,11,4.5)<2.3)return this.ui.inventory();
+  }
+  if(id==='shop')return this.ui.shop('rook');if(id==='bakery')return this.ui.shop('tilly');if(id==='clinic')return this.ui.shop('lumi');if(id==='hall')return this.ui.town();if(id==='repair')return this.ui.craft();if(id==='watch')return this.ui.town();
+  const npc=this.npcNear(2);if(npc)return this.ui.npc(npc);
+  const o=objectAt(this.s,id,p.x,p.y,2);
+  if(o){if(o.type==='pipe'&&this.s.grubs>=2&&!this.s.pumpChoice)return this.ui.pumpChoice();if(o.type==='shipping')return this.ui.shipping();if(o.type==='notice'||o.type==='mailbox')return this.ui.bulletin();if(o.type==='townProject'||o.type==='bridgeSite'||o.type==='watchSite')return this.ui.build();if(o.type==='travel'||o.type==='caravan')return this.ui.caravan();if(o.type==='crate')return this.ui.crimeChoice();if(o.type==='fountain'){p.stamina=clamp(p.stamina+12);this.toast('Cool water restores 12 stamina.');return;}if(['wood','stone','metal','herb'].includes(o.type))return this.gather(o);if(o.type==='farmSign')return this.ui.dialogue('Nim’s Garden','Start by clearing clods with the trowel (1), till with the hoe (2), plant seeds (3), and water (4). Crops grow at dawn, if watered.');if(o.type==='tunnelSign'||o.type==='forestSign')return this.ui.dialogue(o.type==='tunnelSign'?'Root Tunnels':'Bramblewood','Stay alert. Some earth is diggable; stone is not. Use F for Soil Sense, Q to swing, K to dash.');}
+  const [x,y]=this.target();if(id==='farm'&&this.s.crops[`${x},${y}`]?.crop)return this.harvest(x,y);
+  if(id==='farm'&&this.s.crops[`${Math.floor(p.x)},${Math.floor(p.y)}`]?.crop)return this.harvest(Math.floor(p.x),Math.floor(p.y));
+  this.toast('Nothing to interact with nearby. Walk closer to a door, item or resident.');
  }
  gather(o){if(this.p.stamina<3)return this.toast('Too tired to gather.');this.s.gathered[`${this.map}:${o.id}`]=this.s.day;let reward=o.type==='wood'?{wood:2,fiber:1}:o.type==='stone'?{stone:2}:o.type==='metal'?{metal:1}:{herb:2};this.grant(reward);this.p.stamina-=3;this.gainSkill('digging',2);this.toast('Gathered '+Object.entries(reward).map(([k,v])=>`+${v} ${k}`).join(', '));this.sound(480,.11);this.ui.refresh();}
  npcPosition(n){if(this.map==='farm'&&n.id==='moss'&&this.s.storyStage===0)return [12.5,17.5];if(this.map!=='town')return null;

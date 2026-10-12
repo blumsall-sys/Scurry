@@ -2,22 +2,56 @@
 
 **A playable, single-player, top-down woodland RPG alpha that can be hosted directly on GitHub Pages.** You play Nim the earthworm, digging, planting, building and deciding how to treat Clovercross and its neighbours. Original pixel-like artwork is rendered by the bundled Canvas renderer. No third-party runtime dependencies or binary sprite sheets are necessary.
 
-## Play immediately on GitHub Pages (no Node.js needed)
+## v0.9.2 hotfix — leaving rooms, resting, and clicking to interact
 
-1. **Unzip** this archive. Open the unzipped `Scurry_GitHub_Ready` folder; upload the files **inside it** (including `index.html`, `src/`, `style.css`, and `.nojekyll`) to the **root** of a new public GitHub repository, e.g. `scurry`.
-2. GitHub repository → **Add file → Upload files** → drag the project files and the `src` / `docs` folders into the uploader. **Important:** GitHub's web uploader can flatten/misplace folder contents in some workflows. Drag the *contents of the directory*, preserving each nested folder path, or use GitHub Desktop / Git for Windows for consistent folder structure. All files together are well below 100.
-3. Commit to the default `main` branch.
-4. Repository → **Settings → Pages → Build and deployment → Deploy from a branch** → `main` / `(root)` → **Save**.
-5. Open `https://YOURUSERNAME.github.io/scurry/` after the Pages deployment becomes available. The source uses only `./`-relative imports, so a nested repository pathname works without a `base` setting.
+**Symptoms solved:** You could see Nim and the furnished burrow but pressing **E** did nothing at the exit or bed. The cause was a missing `INTERIORS` import in the gameplay engine. It threw a JavaScript `ReferenceError` before either interaction could run. v0.9.2 fixes it and tests every interior.
 
-**Local play:** Because JavaScript ES modules are blocked by some browsers when opened via `file://`, run from a local HTTP server. With Python installed, open a terminal in the extracted folder and run `python -m http.server 8000`. Go to `http://localhost:8000/` in Chrome, Edge, or Firefox. On Windows, `py -m http.server 8000` may work. No `npm install` or backend is required.
+**How to play:** On the starting screen, close the welcome prompt. Press **E** while near the **EXIT ↓** sign at the bottom of the room, **walk south through the marked exit**, or click the EXIT sign when nearby. Nim should appear on the farm in front of the burrow door. Walk up to the doorway outside and press **E** to return inside. To sleep, walk to the bed at the upper-left of Nim's room, press **E** or click the mattress when nearby, then select **Go to sleep · Next day**. You can also click the new **E Interact** button below the game. A visible hint in the game changes when you are near a door or bed.
+
+**Fastest GitHub update:** Replace the **root** `index.html` with the file from this ZIP and commit to `main`. You do not need to delete saves, reinstall anything, or re-upload the other files to use the repaired game. Make sure the GitHub Pages deployment finishes, then do **Ctrl+Shift+R** to bypass cached HTML. `VERSION 0.9.2` should be displayed below the Town Chronicle; existing day, inventory and town state should continue from your saved game.
+
+**Developer note:** The root `index.html` is a *generated self-contained runtime*. If you change `src/*.js` or `style.css`, run `python tools/build_single_file.py` and upload the regenerated `index.html`. Editing only `src/` does not change the deployed game. The main regression tests are `node --test tests/game.test.js`; standalone integrity check is `python tests/standalone_check.py`.
+
+## v0.9.1 hotfix: blank dark-green game window (October 2026)
+
+The original v0.9.0 package loaded `./style.css` and `./src/main.js` as separate resources. If `src` was flattened, missing, or renamed while uploading to GitHub, the HTML/CSS interface appeared, but no JavaScript ever started the Canvas renderer. A similar problem occurred when opening the ES-module version via `file://` on many browsers. The tell-tale symptom is the static `SPRING · DAY 1 / 08:00 · Clear skies` placeholder in the HUD and a completely flat dark green playing field.
+
+**Fixed:** `index.html` now embeds the complete game JavaScript AND CSS. All original game-art pixel graphics are rendered by code; there were never separate image assets to download. **Only `index.html` is required for the playable game.** The modular files remain under `src/` as editable developer source, and `tools/build_single_file.py` regenerates the single-file release.
+
+### To update an existing GitHub Pages deployment
+
+1. **Back up any progress** from the original game's Pause/Settings → Export Save before changing your deployment, if the original version can still load. Existing saves should remain available because the save schema and origin are unchanged.
+2. Open the repository, click **`index.html` → Edit** (pencil), replace its content with the new `index.html` supplied in the ZIP, then **Commit changes**. Alternatively, upload the new root `index.html` and overwrite the existing file using GitHub Desktop, or commit all files from the ZIP. **Do not upload the ZIP itself.**
+3. Confirm the file is at the repository root (next to `README.md`), not in an extra outer folder. In **Settings → Pages**, keep **Deploy from branch → `main` → `/ (root)`**.
+4. Wait for the GitHub Pages deployment and reload your live game with **Ctrl+Shift+R**. The version at the lower right should say **0.9.2** and the HUD should include **YEAR 1**.
+5. Close the welcome modal and confirm you see Nim, a furnished room and the `EXIT ↓` sign. Press WASD to move, E to interact, or click the nearby bed/EXIT artwork.
+
+If it still fails, open Chrome/Edge **F12 → Console** and run `window.SCurryStatus`. It should show `ready: true`, `painted: true`, `frames` increasing, and `error: null`. If an exception prevents drawing, this version now displays a visible error over the game instead of silently leaving a green canvas.
+
+### Fresh deployment / uploading fewer than 100 files
+
+1. Extract the ZIP. **Upload only `index.html` to your repository root** if you just want to play. (Optional: upload the remaining development files, totalling fewer than 100.)
+2. Open your GitHub repository → **Settings → Pages**. Select **Deploy from a branch** → `main` → `/ (root)` → Save.
+3. Your game will appear at `https://YOURUSERNAME.github.io/REPOSITORYNAME/` after publishing.
+
+The single HTML file contains all runtime CSS, pixel drawing routines, interactions and gameplay; it makes **zero external runtime asset or module requests**. Browser save files are stored locally using IndexedDB with a localStorage fallback. You can also double-click `index.html` locally; unlike v0.9.0 there are no ES-module imports to be blocked, although some browsers restrict local save persistence.
+
+### For developers modifying the modular source
+
+Edit `src/data.js`, `src/world.js`, `src/game.js`, `src/render.js`, `src/ui.js`, or `src/main.js`, and/or `style.css`, then regenerate the deployable file using **Python 3**:
+
+```bash
+python tools/build_single_file.py
+```
+
+Upload the newly generated `index.html` to GitHub Pages. Editing the `src/` files *without regenerating* `index.html` **will not change the deployed game**. `tools/index.template.html` is the HTML scaffold used by the builder. No network connection or external libraries are required to build it.
 
 ## Controls
 
 | Key | Action |
 |---|---|
 | WASD / arrows | Walk (diagonal movement normalized) |
-| E | Talk, enter a doorway, gather, harvest, interact |
+| E or click E Interact | Talk, enter a doorway, gather, harvest, rest |
 | 1 / 2 / 3 / 4 | Trowel/dig, hoe/till, plant selected seed, water |
 | Space / nearby mouse click | Use selected tool (trowel also attacks nearby enemies) |
 | Q | Attack with trowel, independent of equipped tool |
@@ -61,7 +95,7 @@ This is an **original, functional alpha / interconnected early sandbox**, *not a
 - Change world rules, consequences, combat and NPC AI in `src/game.js`.
 - Change controls and menus in `src/ui.js` and styling in `style.css`.
 
-No npm dependency, purchased art asset or third-party service is necessary. A browser with Canvas 2D, IndexedDB/localStorage and modern ES module support is sufficient. Font fallback uses built-in fonts.
+No npm dependency, purchased art asset or third-party service is necessary. A browser with JavaScript and Canvas 2D is sufficient; the distributed HTML no longer requires ES module loading. Font fallback uses built-in fonts.
 
 **License note:** Source and original artwork are reserved to the creator by default. Add an explicit OSS license if intending open-source redistribution.
 
