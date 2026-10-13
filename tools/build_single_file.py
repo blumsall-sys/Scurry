@@ -15,7 +15,7 @@ EXPORT_RE = re.compile(r'^\s*export\s+(?:const|class|function)\s+([A-Za-z_][A-Za
 
 
 def render_bundle():
-    result = ['/* SCURRY v0.9.2 | Self-contained browser build | Original source in src/ */',
+    result = ['/* SCURRY v1.1 | Browser build | Source in src/ */',
               '(function(){"use strict"; const __scurryModules = Object.create(null);']
     for module in ORDER:
         code = (ROOT / 'src' / f'{module}.js').read_text(encoding='utf-8')
@@ -51,7 +51,7 @@ def main():
         raise ValueError('CSS contains HTML-closing style tag.')
     page = template.replace('<!-- SCURRY_CSS -->', '<style>\n'+css+'\n</style>')
     page = page.replace('<!-- SCURRY_JS -->', '<script>\n'+js+'\n</script>')
-    page = page.replace('VERSION 0.9 — PLAYABLE ALPHA', 'VERSION 0.9.2 — PLAYABLE ALPHA')
+    page = page.replace('VERSION 0.9 — PLAYABLE ALPHA', 'VERSION 1.0 — ART OVERHAUL')
     if 'SCURRY_CSS' in page or 'SCURRY_JS' in page:
         raise ValueError('Missing template markers')
     (ROOT/'index.html').write_text(page,encoding='utf-8')

@@ -1,6 +1,6 @@
 import {UI} from './ui.js';import {Game} from './game.js';import {paint} from './render.js';
 // Scurry startup diagnostics: view window.SCurryStatus in browser dev tools.
-const status=window.SCurryStatus={version:'0.9.2',ready:false,frames:0,painted:false,error:null};
+const status=window.SCurryStatus={version:'1.1.0-complete',ready:false,frames:0,painted:false,error:null};
 function failure(error){const message=error?.stack||error?.message||String(error);status.error=message;console.error('[Scurry] Runtime error:',error);
  const frame=document.querySelector('.viewport-frame');if(frame&&!frame.querySelector('.game-failure')){
  const notice=document.createElement('div');notice.className='game-failure';notice.setAttribute('role','alert');
@@ -14,5 +14,5 @@ try {
  function frame(now){if(status.error)return;try{const dt=game.last?(now-game.last)/1000:0;game.last=now;game.update(dt);paint(game);status.frames++;status.painted=true;requestAnimationFrame(frame);}catch(error){failure(error);}}
  requestAnimationFrame(frame);
  // Read-only debugging hook for smoke checks.
- window.SCurryDebug={snapshot:()=>structuredClone(game.s),map:()=>game.map,version:'0.9.2',diagnostics:()=>({...status})};
+ window.SCurryDebug={snapshot:()=>structuredClone(game.s),map:()=>game.map,version:'1.1.0-complete',diagnostics:()=>({...status})};
 } catch(error){failure(error);}

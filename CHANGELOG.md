@@ -1,3 +1,20 @@
+# SCURRY – Release history
+
+## v1.1 – Complete GitHub package and artwork integration
+- Rebuilt six original concept sheets as actual evenly spaced sprite atlases, correcting clipped and squashed frames from v1.0.
+- Replaced repetitive ground tile borders with authored seamless 16×16 pixel grass, paths, wood floors, soil, stone and water.
+- Added an original seventh atlas for 14 named town residents and four facing directions each.
+- Integrated new assets into player animation, soil/farm stages, enemies, tools, objects, UI hotbar, bed and town decorations.
+- Added visual detail for building frontages and seven interior room styles while retaining collision and doorway alignment.
+- Preserved the v0.9.2 bed/exit fixes and compatible schema-v3 browser saves.
+- Included the original PDF and Markdown design report and full-resolution art-source sheets.
+- Verified with 16 Node gameplay tests, static package checks and a Chromium smoke test.
+
+## Art Overhaul v1.0
+- Added cohesive pixel-art sprite sheets for Nim, terrain, crops, structures, enemies, and UI icons.
+- Updated renderer to use asset-driven sprites with robust fallbacks.
+- Added GitHub-ready assets folder and rebuilt standalone index.html.
+
 # Changelog
 
 ## 0.9.2 — Interior exit and bed interaction repair

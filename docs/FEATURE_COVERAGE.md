@@ -5,7 +5,7 @@ This document distinguishes **playable alpha systems** from features that the re
 | Proposed feature | Included in GitHub-ready alpha? | Notes |
 | --- | --- | --- |
 | Nim the earthworm begins on a day off | Yes | Starts in burrow with a short gameplay onboarding. |
-| Low-resolution original pixel style | Yes | Canvas artwork is original code-rendered art, editable in `src/render.js`. |
+| Low-resolution original pixel style | Yes | The game uses six remastered image-generated pixel atlases plus original resident sprites and Canvas fallback art. Edit `assets/` and `src/render.js`. |
 | Four outdoor regions | Yes | Farm, town, Root Tunnels, Bramblewood, with generated reusable ground art. |
 | Enterable buildings, aligned thresholds | Yes | Home plus store, bakery, town hall, clinic, works shed, watch house. Their interiors are simplified. |
 | Player movement / NPC interaction | Yes | WASD, diagonals, facing, E, basic time-of-day position changes. |
@@ -36,4 +36,4 @@ This document distinguishes **playable alpha systems** from features that the re
 | Custom authored audio tracks | No | Original simple synthesized SFX. |
 | Phaser 4 / TypeScript / Vite build | No — conscious alternative | Immediately deployable dependency-free Canvas ES modules. See README. |
 
-**Recommended next iteration:** 1) extend NPC movement/pathfinding, 2) deepen farm irrigation and soil quality, 3) add a complete interior/exterior tile atlas and character walk-cycle art sheets, 4) expand combat weapon/attack variations, 5) add deeper faction quests, investigations and ending states, 6) refine disaster prevention and recovery contracts. The existing simulation values live in the data/state engine; preserve current saves via explicit schema migrations as features expand.
+**Recommended next iteration:** 1) extend NPC movement/pathfinding, 2) deepen farm irrigation and soil quality, 3) extend the new sprite atlas coverage to every interior, house and NPC action, 4) expand combat weapon/attack variations, 5) add deeper faction quests, investigations and ending states, 6) refine disaster prevention and recovery contracts. The existing simulation values live in the data/state engine; preserve current saves via explicit schema migrations as features expand.
