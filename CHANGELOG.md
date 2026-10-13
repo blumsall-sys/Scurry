@@ -1,3 +1,11 @@
+# v1.2 — Mobile, interactions, narrative and sprite update
+
+- Responsive mobile controls, click/tap-to-move pathfinding and collision-aware obstacles.
+- Redesigned NPC atlas and readable signs.
+- Collectable vegetable/forage clusters replace inaccessible decorative props.
+- Three-card first-run title sequence, lighter story guidance, quest hint marker and browser TTS toggle.
+- Regression and Chromium desktop/mobile smoke tests.
+
 # SCURRY – Release history
 
 ## v1.1 – Complete GitHub package and artwork integration

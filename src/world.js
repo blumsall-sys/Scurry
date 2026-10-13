@@ -42,7 +42,9 @@ export function houseAt(id,x,y){return HOMES.find(h=>h.map===id&&x>=h.x&&x<h.x+h
 export function blocked(id,x,y,s,entity=false){let t=mapTile(id,Math.floor(x),Math.floor(y),s);if(['wall','rock','softwall','water','hedge','grove'].includes(t))return true;
  if(houseAt(id,Math.floor(x),Math.floor(y)))return true;
  for(const b of s.buildings){if(b.map!==id||!b.x&&b.x!==0)continue;if(x>=b.x&&x<b.x+(b.w||1)&&y>=b.y&&y<b.y+(b.h||1)&&b.type!=='fence'&&b.type!=='drain')return true;if(b.type==='fence'&&Math.floor(x)===b.x&&Math.floor(y)===b.y)return true;}
- for(const obj of world[id]?.objects||[]){if(!obj.solid)continue;if(collected(s,id,obj))continue;if(Math.abs(x-(obj.x+.5))<.55&&Math.abs(y-(obj.y+.5))<.55)return true;}
+ for(const obj of world[id]?.objects||[]){if(!obj.solid && !['crate','shipping','fountain','caravan','travel','bridgeSite','watchSite'].includes(obj.type))continue;if(collected(s,id,obj))continue;const large=['crate','shipping','caravan','fountain','bridgeSite','watchSite','travel'].includes(obj.type);
+  const rx=large?1.05:.48,ry=large?.88:.48;
+  if(Math.abs(x-(obj.x+.5))<rx&&Math.abs(y-(obj.y+.5))<ry)return true;}
  return false;
 }
 export function canMove(id,x,y,s,r=.21){return !blocked(id,x-r,y-r,s)&&!blocked(id,x+r,y-r,s)&&!blocked(id,x-r,y+r,s)&&!blocked(id,x+r,y+r,s);}
@@ -68,7 +70,8 @@ function makeObjects(id){const objects=[];let counter=0;const add=(type,x,y,extr
   add('shipping',43,22);add('mailbox',14,10);add('bedmarker',10,12);add('farmSign',12,15);
  }
  if(id==='town'){
-  add('notice',46,45);add('townProject',51,45);add('travel',58,51);add('crate',33,43);add('fountain',49,49);add('bridgeSite',62,50);add('watchSite',60,54);
+  for(const [x,y] of [[44,48],[53,54],[44,56],[54,46]]) add('herb',x,y);
+  add('notice',46,45);add('townProject',51,45);add('travel',58,51);add('crate',30,44);add('fountain',49,49);add('bridgeSite',62,50);add('watchSite',60,54);
   for(const [x,y] of [[26,39],[32,57],[41,70],[60,29],[54,65],[39,46],[58,75]])add('wood',x,y);
   for(const [x,y] of [[60,42],[22,61],[54,73],[29,30]])add('stone',x,y);
  }

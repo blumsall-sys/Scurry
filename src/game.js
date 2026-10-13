@@ -2,7 +2,7 @@ import {CROPS,SEASONS,MAPS,INTERIORS,NPCS,HOMES,BUILDINGS,RECIPES,FACTIONS,QUEST
 import {world,initializeWorld,mapTile,blocked,canMove,objectAt,doorwayNear,portalNear,validBuild,inFarmPlot,collected} from './world.js';
 const distance=(x,y,a,b)=>Math.hypot(x-a,y-b), money=n=>`${Math.floor(n)} shells`;
 export class Game {
- constructor(ui){this.ui=ui;initializeWorld();this.s=newState();this.keys=new Set();this.buildMode=null;this.paused=true;this.anim=0;this.last=0;this.attacking=0;this.sense=0;this.dash=0;this.dashCd=0;this.hurtCd=0;this.enemies=[];this.particles=[];this.activeMap='';this.accum=0;this.saveElapsed=0;this.audio=null;this.messages=[];}
+ constructor(ui){this.ui=ui;initializeWorld();this.s=newState();this.keys=new Set();this.buildMode=null;this.paused=true;this.anim=0;this.last=0;this.attacking=0;this.sense=0;this.dash=0;this.dashCd=0;this.hurtCd=0;this.enemies=[];this.particles=[];this.activeMap='';this.accum=0;this.saveElapsed=0;this.audio=null;this.messages=[];this.path=[];this.pathAction=false;this.pathTarget=null;this.hintSpot=null;}
  start(save){this.s=save||newState();this.s.enemyKills??={};this.s.quests??={};this.s.npcNeeds??={};this.s.flags??={};this.s.settings??={sound:true,volume:.18,dayLength:12,shake:false};this.s.buildings??=[];this.s.crops??={};this.s.gathered??={};this.s.dug??={};this.s.journal??=[];this.s.eventLog??=[];this.s.town??=newState().town;this.s.player.inv??=newState().player.inv;this.s.player.seeds??=newState().player.seeds;this.s.player.skills??=newState().player.skills;this.s.player.xp??=newState().player.xp;this.enter(this.s.player.map,this.s.player.x,this.s.player.y,true);this.paused=false;this.ui.refresh();}
  get p(){return this.s.player;} get map(){return this.p.map;} get season(){return seasonForDay(this.s.day);} get weather(){return this.s.weather;}
  roll(salt=0){this.s.seed=(Math.imul((this.s.seed+salt)|0,1664525)+1013904223)>>>0;return this.s.seed/4294967296;}
@@ -14,7 +14,7 @@ export class Game {
  spend(cost){for(const [k,v] of Object.entries(cost)){if(k==='shells'?(this.p.shells<v):((this.p.inv[k]||0)<v))return false;}for(const [k,v] of Object.entries(cost)){if(k==='shells')this.p.shells-=v;else this.p.inv[k]-=v;}return true;}
  canAfford(cost){return Object.entries(cost).every(([k,v])=>k==='shells'?this.p.shells>=v:(this.p.inv[k]||0)>=v);}
  grant(items){for(const [k,v] of Object.entries(items))this.p.inv[k]=(this.p.inv[k]||0)+v;}
- enter(id,x,y,initial=false){if(!MAPS[id])return;this.p.map=id;this.p.x=x;this.p.y=y;this.buildMode=null;this.spawnEnemies();if(!initial){this.sound(510,.09);this.ui.save();}this.ui.refresh();}
+ enter(id,x,y,initial=false){if(!MAPS[id])return;this.p.map=id;this.p.x=x;this.p.y=y;this.buildMode=null;this.path=[];this.pathAction=false;this.pathTarget=null;this.spawnEnemies();if(!initial){this.sound(510,.09);this.ui.save();}this.ui.refresh();}
  spawnEnemies(){this.enemies=[];const killed=this.s.enemyKills??{};const add=(id,type,x,y)=>{if(killed[`${this.map}:${id}`]===this.s.day)return;this.enemies.push({id,type,x,y,homeX:x,homeY:y,hp:type==='grub'?24:type==='beetle'?38:32,maxhp:type==='grub'?24:type==='beetle'?38:32,attack:0,cool:0,stun:0,warn:0,dead:false,dirX:1,dirY:0});};
  if(this.map==='farm'&&this.s.clods>=3&&this.s.grubs<2){add('tutorial-grub-1','grub',23.5,17.5);add('tutorial-grub-2','grub',26.5,17.5);}
  if(this.map==='tunnel'){[[19,9],[32,27],[49,31],[13,38],[39,39]].forEach(([x,y],i)=>add('tunnel'+i,i%4===0?'beetle':'grub',x+.5,y+.5));}
@@ -22,10 +22,80 @@ export class Game {
  if(this.map==='town'&&this.s.flags.raidActive)for(let i=0;i<3;i++)add('raid'+i,'scout',59+i,46+i*2);
  }
  setKey(k,on){if(on)this.keys.add(k.toLowerCase());else this.keys.delete(k.toLowerCase());}
+
+ // Identify actual interactable art before routing a tap, never a decorative pixel.
+ targetAt(x,y){
+  const o=(world[this.map]?.objects||[]).find(o=>!collected(this.s,this.map,o)&&Math.abs(x-o.x-.5)<1.35&&Math.abs(y-o.y-.5)<1.35);
+  if(o)return o;
+  if(this.map==='farm'&&this.s.crops[`${Math.floor(x)},${Math.floor(y)}`]?.crop)return {type:'crop'};
+  return NPCS.find(n=>{const pos=this.npcPosition(n);return pos&&Math.hypot(x-pos[0],y-pos[1])<1.35;})||null;
+ }
+ isHotspot(x,y){
+  if(INTERIORS.includes(this.map))return (this.map==='home'&&x>=2.8&&x<=7.1&&y>=2.4&&y<=5.5)||(x>=7.55&&x<=9.55&&y>=9.7&&y<=11.6);
+  return HOMES.some(h=>h.map===this.map&&h.to&&Math.abs(x-(h.x+Math.floor(h.w/2)+.5))<1.1&&Math.abs(y-(h.y+h.h))<1.5)
+   ||(PORTALS[this.map]||[]).some(k=>Math.hypot(x-k.x-.5,y-k.y-.5)<1.2);
+ }
+ // Tap targets route to the exact object, not the nearest unrelated prop.
+ activateTarget(tx,ty){
+  if(this.clickHotspot(tx,ty))return;
+  const target=this.targetAt(tx,ty);
+  if(!target){this.interact();return;}
+  const x=Math.floor(tx),y=Math.floor(ty);
+  const objX=target.x!=null?target.x+.5:tx,objY=target.y!=null?target.y+.5:ty;
+  if(Math.hypot(this.p.x-objX,this.p.y-objY)>2.6){this.toast('Move closer first.');return;}
+  if(target.type==='clod'){this.p.tool=1;this.dig(target.x,target.y);this.ui.refresh();return;}
+  if(target.type==='crop'){this.harvest(x,y);return;}
+  if(target.name&&target.species){this.ui.npc(target);return;}
+  if(['herb','wood','stone','metal'].includes(target.type)){this.gather(target);return;}
+  if(target.type==='shipping')return this.ui.shipping();
+  if(target.type==='fountain'){this.p.stamina=clamp(this.p.stamina+12);this.toast('A cool drink restores your strength.');return;}
+  if(target.type==='crate')return this.ui.crimeChoice();
+  if(['travel','caravan'].includes(target.type))return this.ui.caravan();
+  if(['notice','mailbox'].includes(target.type))return this.ui.bulletin();
+  if(['townProject','bridgeSite','watchSite'].includes(target.type))return this.ui.build();
+  this.interact();
+ }
+ // Bounded grid BFS: collision aware, works on mobile taps and desktop mouse clicks.
+ pathTo(tx,ty,autoInteract=false){
+   if(this.paused)return false;
+   const m=MAPS[this.map], start=[Math.floor(this.p.x),Math.floor(this.p.y)];
+   const target=[Math.floor(tx),Math.floor(ty)];
+   const inbounds=(x,y)=>x>=1&&y>=1&&x<m.w-1&&y<m.h-1;
+   if(!inbounds(...target))return false;
+   const targetIsSolid=!canMove(this.map,target[0]+.5,target[1]+.5,this.s,.23);
+   const reach=autoInteract?1.6:targetIsSolid?1.2:.05;
+   const serial=(x,y)=>y*m.w+x, queue=[start], prev=new Map([[serial(...start),null]]);
+   let found=null, best=null, bestDist=Infinity;
+   for(let i=0;i<queue.length&&i<13000;i++){
+     const [x,y]=queue[i],key=serial(x,y),dist=Math.hypot(x-target[0],y-target[1]);
+     if(dist<bestDist){bestDist=dist;best=key;}
+     if(dist<=reach){found=key;break;}
+     for(const [sx,sy] of [[0,1],[1,0],[0,-1],[-1,0]]){
+       const nx=x+sx,ny=y+sy,nkey=serial(nx,ny);
+       if(!inbounds(nx,ny)||prev.has(nkey)||!canMove(this.map,nx+.5,ny+.5,this.s,.23))continue;
+       prev.set(nkey,key);queue.push([nx,ny]);
+     }
+   }
+   if(found==null){if(bestDist>2.1)return false;found=best;}
+   const path=[];for(let cur=found;cur!=null&&cur!==serial(...start);cur=prev.get(cur))path.push([(cur%m.w)+.5,Math.floor(cur/m.w)+.5]);
+   path.reverse();this.path=path;this.pathAction=autoInteract;this.pathTarget=[tx,ty];
+   if(!path.length&&autoInteract)this.activateTarget(tx,ty);
+   return true;
+ }
+
  direction(){return this.p.face==='up'?[0,-1]:this.p.face==='left'?[-1,0]:this.p.face==='right'?[1,0]:[0,1];}
  target(){const [dx,dy]=this.direction();return [Math.floor(this.p.x+dx*.85),Math.floor(this.p.y+dy*.85)];}
- update(dt){if(this.paused)return;dt=Math.min(dt,.05);this.anim+=dt;this.hurtCd=Math.max(0,this.hurtCd-dt);this.attacking=Math.max(0,this.attacking-dt);this.dash=Math.max(0,this.dash-dt);this.dashCd=Math.max(0,this.dashCd-dt);this.sense=Math.max(0,this.sense-dt);
- let dx=0,dy=0;const k=this.keys;if(k.has('w')||k.has('arrowup'))dy--;if(k.has('s')||k.has('arrowdown'))dy++;if(k.has('a')||k.has('arrowleft'))dx--;if(k.has('d')||k.has('arrowright'))dx++;if(dx||dy){const d=Math.hypot(dx,dy);dx/=d;dy/=d;if(Math.abs(dx)>Math.abs(dy))this.p.face=dx>0?'right':'left';else this.p.face=dy>0?'down':'up';let speed=this.dash>0?13:(k.has('shift')&&this.p.stamina>1?5.0:3.1);if(k.has('shift')&&this.dash<=0){this.p.stamina=Math.max(0,this.p.stamina-dt*6);}const nx=this.p.x+dx*speed*dt,ny=this.p.y+dy*speed*dt;if(canMove(this.map,nx,this.p.y,this.s))this.p.x=nx;if(canMove(this.map,this.p.x,ny,this.s))this.p.y=ny;}
+ update(dt){if(this.paused)return;dt=Math.min(dt,.05);this.anim+=dt;this.hurtCd=Math.max(0,this.hurtCd-dt);this.attacking=Math.max(0,this.attacking-dt);this.dash=Math.max(0,this.dash-dt);this.dashCd=Math.max(0,this.dashCd-dt);this.sense=Math.max(0,this.sense-dt);if(this.hintSpot)this.hintSpot.time-=dt;
+ let dx=0,dy=0;const k=this.keys;if(k.has('w')||k.has('arrowup'))dy--;if(k.has('s')||k.has('arrowdown'))dy++;if(k.has('a')||k.has('arrowleft'))dx--;if(k.has('d')||k.has('arrowright'))dx++;if(dx||dy){this.path=[];this.pathAction=false;} // Manual movement takes priority over tap/click navigation.
+ if(!dx&&!dy&&this.path.length){
+   let node=this.path[0]; const ex=node[0]-this.p.x,ey=node[1]-this.p.y;
+   if(Math.hypot(ex,ey)<.13){this.path.shift();if(!this.path.length){
+     const action=this.pathAction,target=this.pathTarget;this.pathAction=false;this.pathTarget=null;
+     if(action){if(target){const vx=target[0]-this.p.x,vy=target[1]-this.p.y;this.p.face=Math.abs(vx)>Math.abs(vy)?(vx>0?'right':'left'):(vy>0?'down':'up');this.activateTarget(...target);}else this.interact();} }
+   }else{dx=ex;dy=ey;}
+ }
+ if(dx||dy){const d=Math.hypot(dx,dy);dx/=d;dy/=d;if(Math.abs(dx)>Math.abs(dy))this.p.face=dx>0?'right':'left';else this.p.face=dy>0?'down':'up';let speed=this.dash>0?13:(k.has('shift')&&this.p.stamina>1?5.0:3.1);if(k.has('shift')&&this.dash<=0){this.p.stamina=Math.max(0,this.p.stamina-dt*6);}const nx=this.p.x+dx*speed*dt,ny=this.p.y+dy*speed*dt;if(canMove(this.map,nx,this.p.y,this.s))this.p.x=nx;else if(this.path.length)this.path=[];
+  if(canMove(this.map,this.p.x,ny,this.s))this.p.y=ny;else if(this.path.length)this.path=[];}
  // Walking across the visible interior threshold also exits. Keep E as the accessible alternative.
  if(INTERIORS.includes(this.map)&&this.p.y>=10.65&&Math.abs(this.p.x-8.5)<.48){this.exitInterior();return;}
  this.p.stamina=clamp(this.p.stamina+dt*(this.p.fullness<15?1:3.4));this.p.fullness=clamp(this.p.fullness-dt*.021);this.s.minute+=dt*(1440/(60*(this.s.settings.dayLength||12)));if(this.s.minute>=1440)this.advanceDay(false);

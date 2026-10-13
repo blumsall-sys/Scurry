@@ -1,10 +1,24 @@
 # SCURRY — A Little Life. A Big Town.
 
-**Version 1.1 • Complete GitHub deployment package • Playable alpha**
+**Version 1.2 • Mobile + story + collision update • Playable alpha**
 
 Scurry is a single-player retro woodland action-RPG, farm game and town-building simulation. Play as Nim, an anthropomorphic earthworm, and help or exploit the village of Clovercross. **All required runtime files are included.** The game does not require accounts, subscriptions, a game server, npm or paid assets.
 
 This package incorporates the v0.9.2 doorway/bed interaction fixes and a new seven-sheet pixel-art system. The images are **actual game-ready, aligned sprite atlases**, corrected from the earlier loosely spaced concept sheets. The `index.html` contains the gameplay code and CSS; the `assets` folder supplies the new graphics. **Both are required to see the intended artwork.**
+
+## v1.2 fixes and additions
+
+- **NPC art:** rebuilt the directional atlas for all fourteen citizens with individual colours, species silhouettes, clothing and accessories. NPC nameplates now use larger, higher-contrast text.
+- **Building signs:** re-rendered with larger, centred nameplates on each façade. Door collision continues to match the drawn entrances.
+- **Point-and-click / tap-to-walk:** destination routing uses the same collision geometry as manual movement, including houses, buildable structures and solid props. Walking manually cancels navigation. Tap an item or resident to approach and interact automatically where supported.
+- **Touchable mobile interface:** automatically enables a directional pad and separate interaction, tool and attack buttons on touch/coarse-pointer layouts; a tap on terrain sets a destination.
+- **Prop collision:** the large crates, shipping bins, fountains and other physical landmarks block character passage. The town delivery crate was moved away from the shop entrance to preserve access.
+- **Gatherables:** the previously decorative vegetable bundles in Clovercross have become real, collectible herb/produce sprites tied to the inventory and respawn mechanics.
+- **Story presentation:** three unskippable introductory title cards on the first playthrough, original scenic pixel artwork, a compact Adventure chapter card instead of a wall of spoilers, and dialogue-focused conversation panels.
+- **Guidance:** large optional quest-hint button (or **H**), narrated text hints and temporary in-world lead markers. The story is discovered through digging and NPC conversations.
+- **Speech:** the **VOICE ON/OFF** button enables your browser's built-in text-to-speech for dialogue, introductory narration and hints. Voice support and available voices depend on the browser/platform.
+
+**Important:** This remains a playable alpha, not the entire long-form RPG promised in the original design proposal. No existing mechanics were intentionally removed in this update. Import/export uses the same v3 save format; export your current save before uploading to GitHub.
 
 ## Deploy to GitHub Pages
 
@@ -12,7 +26,7 @@ This package incorporates the v0.9.2 doorway/bed interaction fixes and a new sev
 2. Open or create your `scurry` repository on GitHub. Upload all the **extracted files and folders** into the repository root. Do not upload the ZIP as a single file. There are fewer than 100 files.
 3. Confirm that these paths exist in GitHub: `index.html`, `assets/nim_sheet.png`, `assets/terrain_sheet.png`, `assets/crops_sheet.png`, `assets/objects_sheet.png`, `assets/enemies_sheet.png`, `assets/ui_sheet.png`, and `assets/npc_sheet.png`.
 4. In GitHub **Settings → Pages**, choose **Deploy from a branch**, select `main` and `/ (root)`, then Save. Wait until GitHub Pages reports the site is live.
-5. Visit `https://YOURUSERNAME.github.io/scurry/` (or the actual URL reported by GitHub Pages) and use **Ctrl + Shift + R** after the update. Verify **VERSION 1.1** below the right-hand Chronicle panel.
+5. Visit `https://YOURUSERNAME.github.io/scurry/` (or the actual URL reported by GitHub Pages) and use **Ctrl + Shift + R** after the update. Verify **VERSION 1.2** below the right-hand Adventure panel.
 
 **Updating an existing Scurry deployment:** Keep the same repository address to preserve browser-origin saves. Back up your game first with **Pause → Export save JSON**. Replace `index.html` **and the entire `assets/` directory**. Uploading only the HTML will run with fallback graphics instead of the refreshed sprite sheets. You may also replace all files to keep source code aligned. Existing schema-v3 saves remain compatible.
 
@@ -22,7 +36,7 @@ This package incorporates the v0.9.2 doorway/bed interaction fixes and a new sev
 
 | Action | Keys / mouse |
 |---|---|
-| Walk / face | WASD / arrow keys |
+| Walk / face | WASD / arrow keys; click a destination to pathfind around obstacles; tap to walk on touch devices |
 | Interact, talk, harvest, enter, sleep near bed | E or on-screen Interact button; nearby hotspots can be clicked |
 | Use selected trowel/hoe/seeds/water | Space, or nearby map click |
 | Select tools | 1–4 or mouse on hotbar |
@@ -32,9 +46,11 @@ This package incorporates the v0.9.2 doorway/bed interaction fixes and a new sev
 | Sprint | Hold Shift |
 | Inventory / Journal | I / J |
 | Build / Map / Town ledger | B / M / Tab |
+| Quest hint | H or the large **Where should I go?** button in the Adventure card |
+| Read dialogue aloud | **VOICE ON/OFF** in the header (browser speech synthesis, no paid API) |
 | Pause / settings | Esc |
 
-**Start:** Close the welcome panel. Nim appears in the burrow. Walk south to the `EXIT ↓` doorway, or press E at the threshold. On the farm, walk to the garden, face a soil clod, press **1** for Trowel and **Space** to dig it. After three clods, defeat two invading thorn grubs with **Q**. Inspect the old pump part, decide who gets it, and visit Clovercross through the east-side travel marker. Plant/harvest crops, trade, build, defend and explore the connected regions.
+**Start:** Read the three required opening title cards and press Continue through each one. Nim appears in the burrow. Walk south to the `EXIT ↓` doorway, or press E at the threshold. On the farm, walk to the garden, face a soil clod, press **1** for Trowel and **Space** to dig it. After three clods, defeat two invading thorn grubs with **Q**. Inspect the old pump part, decide who gets it, and visit Clovercross through the east-side travel marker. Plant/harvest crops, trade, build, defend and explore the connected regions.
 
 **Bed:** Walk near the upper-left bed in the burrow. Press **E** to open the rest dialogue; choose **Go to sleep · Next day**. You can also click the bed when close. The Chronicle sidebar has a separate Sleep / Next Day shortcut.
 
@@ -49,7 +65,8 @@ This package incorporates the v0.9.2 doorway/bed interaction fixes and a new sev
 | `assets/objects_sheet.png` | Bridges, market stalls, town pump, bed, crates, fountain, repair workbench, decorations. |
 | `assets/enemies_sheet.png` | Thorn grub, Brambler beetle and Thornband scout poses/effects. |
 | `assets/ui_sheet.png` | Trowel, hoe, seed pouch, watering, interaction, combat and system icons. |
-| `assets/npc_sheet.png` | Four directions for each of 14 named animal residents, created with original pixel-drawing code. |
+| `assets/npc_sheet.png` | Four directions for each of 14 redesigned and individually outfitted animal residents, created with original pixel-drawing code. |
+| `assets/intro_meadow.png`, `assets/intro_cave.png` | Original scenic images used in the opening title cards. |
 | `art-source/*.png` | Full-resolution image-generated **source sheets**, kept for future visual updates. |
 | `src/*.js` | Editable world, simulation, rendering, interface and startup source. |
 | `style.css` | Editable UI styles. |
@@ -68,7 +85,7 @@ The new in-game atlases are on strict cell grids (mostly 8×4, objects 4×4). Th
 python -m pip install pillow
 python tools/normalize_sprite_atlases.py
 python tools/clean_terrain.py
-python tools/create_npc_atlas.py
+python tools/build_npc_v12.py
 python tools/build_single_file.py
 ```
 
@@ -76,9 +93,9 @@ The first script reads `art-source/*.png` and produces precisely aligned game at
 
 ## Testing
 
-- Dependency-free gameplay regression suite: `node --test tests/game.test.js` (16 tests).
+- Dependency-free gameplay regression suite: `node --test tests/game.test.js` (19 tests).
 - Static runtime and asset consistency: `python tests/standalone_check.py`.
-- Optional real-browser smoke test: `python tests/browser_smoke.py` (requires Python Playwright plus Chromium). The smoke test exercises boot, all seven art sheets, leaving the burrow, using the bed and rendering all outdoor regions.
+- Optional real-browser smoke test: `python tests/browser_smoke.py` (requires Python Playwright plus Chromium). The smoke test exercises the mandatory introduction, all seven sprite sheets, exiting and resting, desktop routing, mobile D-pad/tap movement, usable town pickups, spoken-dialogue toggle and all outdoor maps.
 - Before publishing, verify the live GitHub Pages asset paths and export a sample save.
 
 ## What's implemented, and what remains

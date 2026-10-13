@@ -32,3 +32,15 @@
 ## Automated tests
 
 With Node.js 20+ installed, `npm test` invokes the built-in Node test runner. These tests use no npm packages. Browser smoke tests were performed with a temporary inlined variant of the same source modules; no external visual assets are required for the shipped project.
+
+
+## v1.2 interactive QA
+- Fresh save: title intro has three sequential pages; Escape and Close do not skip them.
+- Existing schema-v3 save: Continue loads inventory and town state without forcing a fresh intro.
+- Click or tap a walkable spot several tiles away; Nim should route around the buildings and crates. Keyboard movement cancels the route.
+- Tap a town produce/herb bundle; Nim should approach and gather, and inventory should increase.
+- Confirm crates, shipping bins, fountains and solid town props block the player without trapping any shop exits.
+- On mobile, touch controls appear, directional buttons move Nim while held, and touch terrain navigation works.
+- In a resident conversation, confirm the new NPC portrait, species, dialogue, and readable nameplate.
+- Toggle VOICE ON; test a line of introductory text, dialogue and quest hint on a compatible device. Voice availability differs by browser.
+- Hint shows a temporary lead marker only in the correct map; the game remains playable without the hint.

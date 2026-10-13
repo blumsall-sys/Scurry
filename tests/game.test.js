@@ -83,3 +83,31 @@ test('bed sleep advances a single day and original state survives the transition
  g.advanceDay(true);assert.equal(g.s.day,3);assert.equal(g.p.shells,61);
  assert.equal(g.map,'home');
 });
+
+test('solid town crates and shipping structures block movement without trapping shop doorways',()=>{
+ const g=make('town'),crate=world.town.objects.find(o=>o.type==='crate');
+ assert.ok(crate);assert.equal(blocked('town',crate.x+.5,crate.y+.5,g.s),true);
+ assert.equal(blocked('town',crate.x+.85,crate.y+.5,g.s),true,'crate collision must cover visible sprite footprint');
+ for(const h of HOMES.filter(h=>h.map==='town'&&h.to)){
+  const x=h.x+Math.floor(h.w/2)+.5,y=h.y+h.h+1.6;
+  assert.equal(blocked('town',x,y,g.s),false,'doorstep should stay clear: '+h.to);
+ }
+});
+
+test('formerly decorative town vegetable bundles are real collectables',()=>{
+ const g=make('town'),herbs=world.town.objects.filter(o=>o.type==='herb');
+ assert.equal(herbs.length,4);
+ const o=herbs[0];g.p.x=o.x-.5;g.p.y=o.y+.5;
+ const before=g.p.inv.herb;
+ g.activateTarget(o.x+.5,o.y+.5);
+ assert.equal(g.p.inv.herb,before+2);
+ assert.equal(g.s.gathered[`town:${o.id}`],g.s.day);
+});
+
+test('tap/click path requests navigate around physical barriers',()=>{
+ const g=make('town');g.p.x=34.5;g.p.y=43.5;
+ assert.equal(g.pathTo(41.5,45.5),true);
+ for(let i=0;i<140;i++)g.update(.04);
+ assert.ok(g.p.x>37,`walked only to ${g.p.x}`);
+ assert.equal(blocked('town',g.p.x,g.p.y,g.s),false);
+});

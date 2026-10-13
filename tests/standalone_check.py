@@ -12,7 +12,7 @@ assert '<style>' in html and '.viewport-frame' in html
 assert 'src="./src/main.js"' not in html
 assert 'href="./style.css"' not in html
 assert 'requestAnimationFrame(frame)' in html and 'function drawTile' in html
-assert 'VERSION 1.1' in html
+assert 'VERSION 1.2' in html
 assert 'id="interactBtn"' in html
 assert 'INTERIORS,NPCS' in (root/'src/game.js').read_text()
 assert 'clickHotspot(wx,wy)' in html
@@ -23,4 +23,7 @@ assert sum(p.is_file() for p in root.rglob('*')) < 100
 for image in ('nim_sheet.png','terrain_sheet.png','crops_sheet.png','objects_sheet.png','enemies_sheet.png','ui_sheet.png','npc_sheet.png'):
     assert (root/'assets'/image).is_file(),image
     assert f'assets/{image}' in html or image=='npc_sheet.png' and 'assets/npc_sheet.png' in html,image
-print('PASS: embedded engine/CSS, all seven graphic atlases, and fewer than 100 files.')
+assert (root/'assets/intro_meadow.png').exists()
+assert (root/'assets/intro_cave.png').exists()
+assert 'id="ttsToggle"' in html and 'id="questHintBtn"' in html and 'id="mobileControls"' in html
+print('PASS: embedded engine/CSS, all seven graphic atlases, title scenes, mobile + TTS controls, under 100 files.')
